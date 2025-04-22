@@ -9,10 +9,8 @@
 
     const APP_NAME = "tag-master";
 
-    // Function to determine if context menu should show
     function shouldShowTagMenu(uris) {
-        // Only show for track URIs
-        return uris.some(uri => uri.startsWith("spotify:track:"));
+        return uris.some(uri => uri.startsWith("spotify:track:") || uri.startsWith("spotify:local:"));
     }
 
     function handleTagMenuClick(uris) {
@@ -20,6 +18,12 @@
 
         if (uris.length > 0) {
             const trackUri = uris[0];
+            console.log("Processing URI:", trackUri);
+
+            if (trackUri.startsWith("spotify:local:")) {
+                console.log("Local file detected in context menu");
+            }
+
             const targetUrl = `/${APP_NAME}?uri=${encodeURIComponent(trackUri)}`;
             console.log("Opening TagMaster with URL:", targetUrl);
 
@@ -32,7 +36,7 @@
         }
     }
 
-    // Create context menu item - note the SVG icon as the 4th parameter
+    // Create context menu item
     new Spicetify.ContextMenu.Item(
         "Tag with TagMaster",
         handleTagMenuClick,
