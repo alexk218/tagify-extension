@@ -256,6 +256,7 @@
     tagColumn.setAttribute("aria-colindex", colIndex.toString());
     tagColumn.style.display = "flex";
     tagColumn.style.alignItems = "center";
+    tagColumn.style.justifyContent = "space-between"; // This helps with alignment
 
     // Check if track is tagged
     const isTagged = isTrackTagged(trackUri);
@@ -263,33 +264,56 @@
     // Check if we should show the warning icon
     const needsWarning = shouldShowLikedOnlyWarning(trackUri);
 
-    // Create tag info element if track is tagged or needs warning
+    // Create a structured layout for consistent positioning
     if (isTagged || needsWarning) {
-      const text = document.createElement("p");
-      text.classList.add("tagmaster-tag");
-      text.style.fontSize = "12px";
-      text.style.display = "flex";
-      text.style.alignItems = "center";
-      text.style.gap = "4px";
+      // Create a container for the tag info with consistent layout
+      const container = document.createElement("div");
+      container.style.display = "flex";
+      container.style.width = "100%";
+      container.style.alignItems = "center";
+      container.style.justifyContent = "space-between";
 
-      let content = "";
+      // Create the tag info element (left side)
+      const tagInfo = document.createElement("div");
+      tagInfo.style.display = "flex";
+      tagInfo.style.alignItems = "center";
 
-      // Add tag indicator if track is tagged
       if (isTagged) {
         const summary = getTrackTagSummary(trackUri);
-        content += `<span style="color:#1DB954; margin-right:4px;">●</span> ${summary}`;
+        const tagText = document.createElement("div");
+        tagText.innerHTML = `<span style="color:#1DB954; margin-right:4px;">●</span> <span class="tag-summary">${summary}</span>`;
+        tagText.style.fontSize = "12px";
+
+        // Add tooltip with detailed tag list
+        if (
+          trackUri in taggedTracks &&
+          taggedTracks[trackUri].tags &&
+          taggedTracks[trackUri].tags.length > 0
+        ) {
+          const tagList = createTagListTooltip(trackUri);
+          tagText.title = tagList;
+        }
+
+        tagInfo.appendChild(tagText);
       }
 
-      // Add warning icon if needed
+      container.appendChild(tagInfo);
+
+      // Add warning at the right side
+      const warningContainer = document.createElement("div");
+      warningContainer.style.marginLeft = "auto"; // Push to the right
+
       if (needsWarning) {
-        // If track is also tagged, add some spacing
-        const marginLeft = isTagged ? "8px" : "0";
-        content += `<span style="color:#ffcc00; font-size:12px; margin-left:${marginLeft};" 
-                     title="This track is only in Liked Songs or excluded playlists">⚠️</span>`;
+        const warningIcon = document.createElement("span");
+        warningIcon.innerHTML = "⚠️";
+        warningIcon.style.color = "#ffcc00";
+        warningIcon.style.fontSize = "12px";
+        warningIcon.title = "This track is only in Liked Songs or excluded playlists";
+        warningContainer.appendChild(warningIcon);
       }
 
-      text.innerHTML = content;
-      tagColumn.appendChild(text);
+      container.appendChild(warningContainer);
+      tagColumn.appendChild(container);
     }
 
     // Insert our column before the last column
@@ -311,6 +335,105 @@
       default:
         break;
     }
+  }
+
+  // Function to create a formatted tooltip with all tags from a track
+  function createTagListTooltip(trackUri) {
+    if (!taggedTracks[trackUri]) return "";
+
+    const track = taggedTracks[trackUri];
+    let tooltipContent = [];
+
+    // Add rating if present
+    if (track.rating > 0) {
+      tooltipContent.push(`Rating: ${track.rating}★`);
+    }
+
+    // Add energy if present
+    if (track.energy > 0) {
+      tooltipContent.push(`Energy: ${track.energy}/10`);
+    }
+
+    // Collect and organize all tags
+    const tagsByCategory = {};
+
+    if (track.tags && track.tags.length > 0) {
+      // Process tags that have category structure (newer format)
+      const structuredTags = track.tags.filter(
+        (tag) => tag.categoryId && tag.subcategoryId && tag.tagId
+      );
+
+      if (structuredTags.length > 0) {
+        // Get category data from localStorage if available
+        let categories = [];
+        try {
+          const tagDataString = localStorage.getItem("tagmaster:tagData");
+          if (tagDataString) {
+            const tagData = JSON.parse(tagDataString);
+            if (tagData && tagData.categories) {
+              categories = tagData.categories;
+            }
+          }
+        } catch (error) {
+          console.error("Error loading categories:", error);
+        }
+
+        // Process structured tags
+        structuredTags.forEach((tag) => {
+          // Try to find category and subcategory names
+          let categoryName = "Other";
+          let subcategoryName = "";
+          let tagName = "";
+
+          const category = categories.find((c) => c.id === tag.categoryId);
+          if (category) {
+            categoryName = category.name;
+            const subcategory = category.subcategories.find((s) => s.id === tag.subcategoryId);
+            if (subcategory) {
+              subcategoryName = subcategory.name;
+              const tagObj = subcategory.tags.find((t) => t.id === tag.tagId);
+              if (tagObj) {
+                tagName = tagObj.name;
+              }
+            }
+          }
+
+          // Add to organized structure
+          if (!tagsByCategory[categoryName]) {
+            tagsByCategory[categoryName] = {};
+          }
+          if (!tagsByCategory[categoryName][subcategoryName]) {
+            tagsByCategory[categoryName][subcategoryName] = [];
+          }
+          if (tagName) {
+            tagsByCategory[categoryName][subcategoryName].push(tagName);
+          }
+        });
+
+        // Format the tooltip content
+        const tagLines = [];
+        Object.entries(tagsByCategory).forEach(([category, subcategories]) => {
+          Object.entries(subcategories).forEach(([subcategory, tags]) => {
+            if (tags.length > 0) {
+              tagLines.push(`${category} > ${subcategory}: ${tags.join(", ")}`);
+            }
+          });
+        });
+
+        if (tagLines.length > 0) {
+          tooltipContent.push("Tags:");
+          tooltipContent = tooltipContent.concat(tagLines);
+        }
+      } else {
+        // Handle older format tags
+        const simpleTags = track.tags.filter((tag) => tag.tag).map((tag) => tag.tag);
+        if (simpleTags.length > 0) {
+          tooltipContent.push(`Tags: ${simpleTags.join(", ")}`);
+        }
+      }
+    }
+
+    return tooltipContent.join("\n");
   }
 
   // Process all tracks in a tracklist
