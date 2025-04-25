@@ -1,5 +1,3 @@
-// tagmaster-indicator.js
-
 (function TagMasterIndicator() {
   // Wait for Spicetify to be ready
   if (!Spicetify?.Platform) {
@@ -10,8 +8,90 @@
   console.log("TagMaster: Indicator extension loading...");
 
   const STORAGE_KEY = "tagmaster:tagData";
+  const PLAYLIST_CACHE_KEY = "tagmaster:playlistCache";
+  const SETTINGS_KEY = "tagmaster:playlistSettings";
   let taggedTracks = {};
   let observer = null;
+
+  function getPlaylistCache() {
+    try {
+      const cacheString = localStorage.getItem(PLAYLIST_CACHE_KEY);
+      if (cacheString) {
+        return JSON.parse(cacheString);
+      }
+    } catch (error) {
+      console.error("TagMaster: Error reading playlist cache:", error);
+    }
+
+    // Return empty cache if not found or error
+    return {
+      tracks: {},
+      lastUpdated: 0,
+    };
+  }
+
+  function getPlaylistSettings() {
+    try {
+      const settingsString = localStorage.getItem(SETTINGS_KEY);
+      if (settingsString) {
+        return JSON.parse(settingsString);
+      }
+    } catch (error) {
+      console.error("TagMaster: Error reading playlist settings:", error);
+    }
+
+    // Return default settings if not found or error
+    return {
+      excludeNonOwnedPlaylists: true,
+      excludedKeywords: ["Daylist", "Unchartify", "Discover Weekly", "Release Radar"],
+      excludedPlaylistIds: [],
+      excludeByDescription: ["ignore"],
+    };
+  }
+
+  function isPlaylistExcluded(playlistId, playlistName) {
+    // Get the current playlist settings
+    const settings = getPlaylistSettings();
+
+    // Check if this is a playlist that's specifically excluded
+    if (settings.excludedPlaylistIds.includes(playlistId)) return true;
+
+    // Check for excluded keywords in name
+    if (
+      settings.excludedKeywords.some((keyword) =>
+        playlistName.toLowerCase().includes(keyword.toLowerCase())
+      )
+    ) {
+      return true;
+    }
+
+    // Also check hardcoded exclusions like MASTER
+    if (playlistName === "MASTER") return true;
+
+    return false;
+  }
+
+  function shouldShowLikedOnlyWarning(trackUri) {
+    // Get playlist cache
+    const cache = getPlaylistCache();
+
+    // Get all playlists this track belongs to
+    const containingPlaylists = cache.tracks[trackUri] || [];
+
+    // If not in any playlists at all, don't show warning
+    if (containingPlaylists.length === 0) return false;
+
+    // Find if there's at least one non-excluded, non-Liked Songs playlist
+    const hasNonExcludedPlaylists = containingPlaylists.some((playlist) => {
+      // Skip Liked Songs and excluded playlists
+      return playlist.id !== "liked" && !isPlaylistExcluded(playlist.id, playlist.name);
+    });
+
+    // Show warning if either:
+    // 1. Only in Liked Songs, or
+    // 2. Only in Liked Songs and excluded playlists
+    return !hasNonExcludedPlaylists;
+  }
 
   // Load tagged tracks from localStorage
   function loadTaggedTracks() {
@@ -175,20 +255,40 @@
     tagColumn.classList.add("tagmaster-info");
     tagColumn.setAttribute("aria-colindex", colIndex.toString());
     tagColumn.style.display = "flex";
+    tagColumn.style.alignItems = "center";
 
-    // Only add indicator if track is tagged
-    if (isTrackTagged(trackUri)) {
-      console.log(`TagMaster: Adding indicator for ${trackUri}`);
+    // Check if track is tagged
+    const isTagged = isTrackTagged(trackUri);
 
-      // Create tag info element
+    // Check if we should show the warning icon
+    const needsWarning = shouldShowLikedOnlyWarning(trackUri);
+
+    // Create tag info element if track is tagged or needs warning
+    if (isTagged || needsWarning) {
       const text = document.createElement("p");
       text.classList.add("tagmaster-tag");
       text.style.fontSize = "12px";
+      text.style.display = "flex";
+      text.style.alignItems = "center";
+      text.style.gap = "4px";
 
-      // Generate display text
-      const summary = getTrackTagSummary(trackUri);
-      text.innerHTML = `<span style="color:#1DB954; margin-right:4px;">●</span> ${summary}`;
+      let content = "";
 
+      // Add tag indicator if track is tagged
+      if (isTagged) {
+        const summary = getTrackTagSummary(trackUri);
+        content += `<span style="color:#1DB954; margin-right:4px;">●</span> ${summary}`;
+      }
+
+      // Add warning icon if needed
+      if (needsWarning) {
+        // If track is also tagged, add some spacing
+        const marginLeft = isTagged ? "8px" : "0";
+        content += `<span style="color:#ffcc00; font-size:12px; margin-left:${marginLeft};" 
+                     title="This track is only in Liked Songs or excluded playlists">⚠️</span>`;
+      }
+
+      text.innerHTML = content;
       tagColumn.appendChild(text);
     }
 
