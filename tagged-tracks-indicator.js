@@ -297,11 +297,19 @@
     tagColumn.style.alignItems = "center";
     tagColumn.style.justifyContent = "space-between"; // This helps with alignment
 
-    // Check if track is tagged
-    const isTagged = isTrackTagged(trackUri);
+    // Make the entire column clickable
+    tagColumn.style.cursor = "pointer";
+    tagColumn.onclick = (e) => {
+      // Prevent default row click behavior
+      e.stopPropagation();
 
-    // Check if we should show the warning icon
-    const needsWarning = shouldShowLikedOnlyWarning(trackUri);
+      // Navigate to TagMaster with this track
+      Spicetify.Platform.History.push({
+        pathname: "/tag-master",
+        search: `?uri=${encodeURIComponent(trackUri)}`,
+        state: { trackUri },
+      });
+    };
 
     // Create a structured layout for consistent positioning
     const container = document.createElement("div");
@@ -314,6 +322,9 @@
     const tagInfo = document.createElement("div");
     tagInfo.style.display = "flex";
     tagInfo.style.alignItems = "center";
+
+    // Check if track is tagged
+    const isTagged = isTrackTagged(trackUri);
 
     if (isTagged) {
       const summary = getTrackTagSummary(trackUri);
@@ -343,9 +354,12 @@
 
     container.appendChild(tagInfo);
 
-    // Add status indicator at the right side (warning or success)
+    // Add warning at the right side
     const statusContainer = document.createElement("div");
-    statusContainer.style.marginLeft = "auto";
+    statusContainer.style.marginLeft = "auto"; // Push to the right
+
+    // Check if we should show the warning icon
+    const needsWarning = shouldShowLikedOnlyWarning(trackUri);
 
     if (needsWarning) {
       // Add warning icon for tracks only in Liked Songs or excluded playlists
@@ -365,7 +379,7 @@
 
       // Add the list of playlists as a tooltip
       const playlistList = getPlaylistListForTrack(trackUri);
-      successIcon.title = `${playlistList}`;
+      successIcon.title = `In playlists: ${playlistList}`;
 
       statusContainer.appendChild(successIcon);
     }

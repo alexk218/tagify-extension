@@ -269,7 +269,7 @@
       } else {
         // Green checkmark for tracks in regular playlists
         const playlistList = getPlaylistListForTrack(trackUri);
-        htmlContent += `<span style="color:#1DB954; margin-left:4px;" title="In playlists: ${playlistList}">✓</span>`;
+        htmlContent += `<span style="color:#1DB954; margin-left:4px;" title="${playlistList}">✓</span>`;
       }
 
       // Update the content
