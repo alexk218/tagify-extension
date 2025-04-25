@@ -255,6 +255,20 @@
     }
   }
 
+  function hasIncompleteTags(trackUri) {
+    if (!taggedTracks[trackUri]) return true;
+
+    const track = taggedTracks[trackUri];
+
+    // Check if any of these are missing
+    const missingRating = track.rating === 0 || track.rating === undefined;
+    const missingEnergy = track.energy === 0 || track.energy === undefined;
+    const missingTags = !track.tags || track.tags.length === 0;
+
+    // Return true if any are missing
+    return missingRating || missingEnergy || missingTags;
+  }
+
   // Add TagMaster info to track row
   function addTagInfoToTrack(row) {
     // Skip if already processed
@@ -304,7 +318,14 @@
     if (isTagged) {
       const summary = getTrackTagSummary(trackUri);
       const tagText = document.createElement("div");
-      tagText.innerHTML = `<span style="color:#1DB954; margin-right:4px;">●</span> <span class="tag-summary">${summary}</span>`;
+
+      // Check if track has incomplete tags
+      const incomplete = hasIncompleteTags(trackUri);
+
+      // Use orange bullet for incomplete tags, green for complete tags
+      const bulletColor = incomplete ? "#FFA500" : "#1DB954";
+
+      tagText.innerHTML = `<span style="color:${bulletColor}; margin-right:4px;">●</span> <span class="tag-summary">${summary}</span>`;
       tagText.style.fontSize = "12px";
 
       // Add tooltip with detailed tag list
