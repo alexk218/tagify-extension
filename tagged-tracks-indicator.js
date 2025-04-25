@@ -93,6 +93,31 @@
     return !hasNonExcludedPlaylists;
   }
 
+  function getPlaylistListForTrack(trackUri) {
+    // Get playlist cache
+    const cache = getPlaylistCache();
+
+    // Get all playlists this track belongs to
+    const containingPlaylists = cache.tracks[trackUri] || [];
+
+    // Filter out excluded playlists and "Liked Songs"
+    const relevantPlaylists = containingPlaylists.filter((playlist) => {
+      // Skip excluded playlists
+      return !isPlaylistExcluded(playlist.id, playlist.name) && playlist.id !== "liked";
+    });
+
+    // If there are no relevant playlists, return empty string
+    if (relevantPlaylists.length === 0) {
+      return "No regular playlists";
+    }
+
+    // Extract playlist names and sort alphabetically
+    const playlistNames = relevantPlaylists.map((playlist) => playlist.name).sort();
+
+    // Join with commas and return
+    return playlistNames.join(", ");
+  }
+
   // Load tagged tracks from localStorage
   function loadTaggedTracks() {
     try {
@@ -299,7 +324,7 @@
 
     // Add status indicator at the right side (warning or success)
     const statusContainer = document.createElement("div");
-    statusContainer.style.marginLeft = "auto"; // Push to the right
+    statusContainer.style.marginLeft = "auto";
 
     if (needsWarning) {
       // Add warning icon for tracks only in Liked Songs or excluded playlists
@@ -316,7 +341,11 @@
       successIcon.style.color = "#1DB954"; // Spotify green
       successIcon.style.fontSize = "12px";
       successIcon.style.fontWeight = "bold";
-      successIcon.title = "This track is properly organized in playlists";
+
+      // Add the list of playlists as a tooltip
+      const playlistList = getPlaylistListForTrack(trackUri);
+      successIcon.title = `${playlistList}`;
+
       statusContainer.appendChild(successIcon);
     }
 
