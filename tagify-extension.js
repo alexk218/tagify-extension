@@ -1,21 +1,19 @@
-// tagmaster-extension.js
-
-(function TagMasterExtension() {
+(function TagifyExtension() {
   // Wait for Spicetify to be ready
   if (!(Spicetify?.Platform && Spicetify?.CosmosAsync)) {
-    setTimeout(TagMasterExtension, 300);
+    setTimeout(TagifyExtension, 300);
     return;
   }
 
-  const APP_NAME = "tag-master";
+  const APP_NAME = "tagify";
   const VERSION = "1.0.0";
 
   // Shared constants
-  const STORAGE_KEY = "tagmaster:tagData";
-  const PLAYLIST_CACHE_KEY = "tagmaster:playlistCache";
-  const SETTINGS_KEY = "tagmaster:playlistSettings";
+  const STORAGE_KEY = "tagify:tagData";
+  const PLAYLIST_CACHE_KEY = "tagify:playlistCache";
+  const SETTINGS_KEY = "tagify:playlistSettings";
 
-  console.log(`TagMaster: Extension loading (v${VERSION})...`);
+  console.log(`Tagify: Extension loading (v${VERSION})...`);
 
   // Shared state
   const state = {
@@ -43,14 +41,12 @@
           const data = JSON.parse(savedData);
           if (data && data.tracks) {
             state.taggedTracks = data.tracks;
-            console.log(
-              `TagMaster: Loaded ${Object.keys(state.taggedTracks).length} tagged tracks`
-            );
+            console.log(`Tagify: Loaded ${Object.keys(state.taggedTracks).length} tagged tracks`);
             return true;
           }
         }
       } catch (error) {
-        console.error("TagMaster: Error loading data", error);
+        console.error("Tagify: Error loading data", error);
       }
       return false;
     },
@@ -75,7 +71,7 @@
           return JSON.parse(cacheString);
         }
       } catch (error) {
-        console.error("TagMaster: Error reading playlist cache:", error);
+        console.error("Tagify: Error reading playlist cache:", error);
       }
 
       // Return empty cache if not found or error
@@ -96,7 +92,7 @@
           return JSON.parse(settingsString);
         }
       } catch (error) {
-        console.error("TagMaster: Error reading playlist settings:", error);
+        console.error("Tagify: Error reading playlist settings:", error);
       }
 
       // Return default settings if not found or error
@@ -273,23 +269,25 @@
       if (state.initialized.menu) return;
 
       if (!Spicetify.ContextMenu) {
-        console.warn("TagMaster: Spicetify.ContextMenu not available, menu feature disabled");
+        console.warn("Tagify: Spicetify.ContextMenu not available, menu feature disabled");
         return;
       }
 
       try {
         // Create menu item
         new Spicetify.ContextMenu.Item(
-          "Tag with TagMaster",
+          "Tag with Tagify",
           this.handleMenuClick,
           this.shouldShowMenu,
-          `<svg role="img" height="16" width="16" viewBox="0 0 16 16" fill="currentColor"><path d="M7.19 1A4.82 4.82 0 0 0 2.67 3a4.82 4.82 0 0 0 0 4.37 4.83 4.83 0 0 0 4.37 2.76 2.41 2.41 0 0 0 1.81-.73l4.68-5.05a2.4 2.4 0 0 0 0-3.22 2.4 2.4 0 0 0-3.22 0L5.26 6.18a.6.6 0 1 0 .87.81l5.05-5.05a1.2 1.2 0 0 1 1.61 0 1.2 1.2 0 0 1 0 1.61l-4.68 5.05a1.2 1.2 0 0 1-.9.37 3.62 3.62 0 0 1-3.27-2.07 3.62 3.62 0 0 1 0-3.28A3.63 3.63 0 0 1 7.19 2.2a.6.6 0 0 0 0-1.2z"></path><path d="M13.32 8.1a.6.6 0 0 0-.6.61v1.21a.6.6 0 0 0 .6.61.61.61 0 0 0 .61-.61V8.71a.61.61 0 0 0-.61-.61z"></path><path d="M11.5 8.1a.6.6 0 0 0-.6.61v3.03a.6.6 0 0 0 .6.61.61.61 0 0 0 .61-.61V8.71a.61.61 0 0 0-.61-.61z"></path><path d="M9.69 8.1a.6.6 0 0 0-.61.61v3.03a.6.6 0 0 0 .61.61.6.6 0 0 0 .6-.61V8.71a.6.6 0 0 0-.6-.61z"></path><path d="M7.87 10.52a.6.6 0 0 0-.6.61v1.21a.6.6 0 0 0 .6.61.61.61 0 0 0 .61-.61v-1.21a.61.61 0 0 0-.61-.61z"></path></svg>`
+          `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M21.41,11.58L12.41,2.58C12.04,2.21 11.53,2 11,2H4C2.9,2 2,2.9 2,4V11C2,11.53 2.21,12.04 2.59,12.42L11.59,21.42C11.96,21.79 12.47,22 13,22C13.53,22 14.04,21.79 14.41,21.42L21.41,14.42C21.79,14.04 22,13.53 22,13C22,12.47 21.79,11.96 21.41,11.58M5.5,7C4.67,7 4,6.33 4,5.5C4,4.67 4.67,4 5.5,4C6.33,4 7,4.67 7,5.5C7,6.33 6.33,7 5.5,7Z"/>
+          </svg>`
         ).register();
 
-        console.log("TagMaster: Menu feature initialized");
+        console.log("Tagify: Menu feature initialized");
         state.initialized.menu = true;
       } catch (error) {
-        console.error("TagMaster: Error initializing menu feature:", error);
+        console.error("Tagify: Error initializing menu feature:", error);
       }
     },
 
@@ -341,7 +339,7 @@
     initialize: function () {
       if (state.initialized.indicator) return;
 
-      console.log("TagMaster: Initializing tracklist indicator feature...");
+      console.log("Tagify: Initializing tracklist indicator feature...");
 
       try {
         // Set up mutation observer
@@ -354,7 +352,7 @@
         setInterval(this.updateTracklists, 3000);
 
         // Setup debug utility
-        window.tagmasterDebug = {
+        window.tagifyDebug = {
           reprocess: this.updateTracklists,
           getData: () => state.taggedTracks,
           checkTrack: (uri) => console.log(`Track ${uri} is tagged: ${utils.isTrackTagged(uri)}`),
@@ -362,7 +360,7 @@
 
         state.initialized.indicator = true;
       } catch (error) {
-        console.error("TagMaster: Error initializing indicator feature:", error);
+        console.error("Tagify: Error initializing indicator feature:", error);
       }
     },
 
@@ -391,7 +389,7 @@
             );
 
             if (addedTracklists.length > 0) {
-              console.log("TagMaster: New tracklist detected, updating...");
+              console.log("Tagify: New tracklist detected, updating...");
               indicatorFeature.updateTracklists();
 
               // Observe each tracklist for changes
@@ -428,7 +426,7 @@
      */
     updateTracklists: function () {
       const tracklists = document.getElementsByClassName("main-trackList-indexable");
-      console.log(`TagMaster: Found ${tracklists.length} tracklists to process`);
+      // console.log(`Tagify: Found ${tracklists.length} tracklists to process`);
 
       for (const tracklist of tracklists) {
         indicatorFeature.processTracklist(tracklist);
@@ -462,9 +460,10 @@
         indicatorFeature.addTagInfoToTrack(row);
       });
 
-      console.log(
-        `TagMaster: Processed ${trackRows.length} rows, found ${taggedCount} tagged tracks`
-      );
+      console
+        .log
+        // `Tagify: Processed ${trackRows.length} rows, found ${taggedCount} tagged tracks`
+        ();
     },
 
     /**
@@ -472,7 +471,7 @@
      * @param {HTMLElement} header - The header element
      */
     addColumnToHeader: function (header) {
-      if (!header || header.querySelector(".tagmaster-header")) return;
+      if (!header || header.querySelector(".tagify-header")) return;
 
       // Find the last column to insert before
       const lastColumn = header.querySelector(".main-trackList-rowSectionEnd");
@@ -485,7 +484,7 @@
       // Create our new column
       const tagColumn = document.createElement("div");
       tagColumn.classList.add("main-trackList-rowSectionVariable");
-      tagColumn.classList.add("tagmaster-header");
+      tagColumn.classList.add("tagify-header");
       tagColumn.setAttribute("role", "columnheader");
       tagColumn.setAttribute("aria-colindex", colIndex.toString());
       tagColumn.style.display = "flex";
@@ -498,7 +497,7 @@
       const headerText = document.createElement("span");
       headerText.classList.add("TypeElement-mesto-type");
       headerText.classList.add("standalone-ellipsis-one-line");
-      headerText.textContent = "TagMaster";
+      headerText.textContent = "Tagify";
 
       headerButton.appendChild(headerText);
       tagColumn.appendChild(headerButton);
@@ -525,12 +524,12 @@
     },
 
     /**
-     * Add TagMaster info to track row
+     * Add Tagify info to track row
      * @param {HTMLElement} row - The track row element
      */
     addTagInfoToTrack: function (row) {
       // Skip if already processed
-      if (row.querySelector(".tagmaster-info")) return;
+      if (row.querySelector(".tagify-info")) return;
 
       // Get track URI
       const trackUri = utils.getTracklistTrackUri(row);
@@ -549,7 +548,7 @@
       // Create our tag info column
       const tagColumn = document.createElement("div");
       tagColumn.classList.add("main-trackList-rowSectionVariable");
-      tagColumn.classList.add("tagmaster-info");
+      tagColumn.classList.add("tagify-info");
       tagColumn.setAttribute("aria-colindex", colIndex.toString());
       tagColumn.style.display = "flex";
       tagColumn.style.alignItems = "center";
@@ -561,9 +560,9 @@
         // Prevent default row click behavior
         e.stopPropagation();
 
-        // Navigate to TagMaster with this track
+        // Navigate to Tagify with this track
         Spicetify.Platform.History.push({
-          pathname: "/tag-master",
+          pathname: `/${APP_NAME}`,
           search: `?uri=${encodeURIComponent(trackUri)}`,
           state: { trackUri },
         });
@@ -691,7 +690,7 @@
         // Get category data from localStorage if available
         let categories = [];
         try {
-          const tagDataString = localStorage.getItem("tagmaster:tagData");
+          const tagDataString = localStorage.getItem("tagify:tagData");
           if (tagDataString) {
             const tagData = JSON.parse(tagDataString);
             if (tagData && tagData.categories) {
@@ -789,10 +788,10 @@
           subtree: true,
         });
 
-        console.log("TagMaster: Playbar feature initialized successfully");
+        console.log("Tagify: Playbar feature initialized successfully");
         state.initialized.playbar = true;
       } catch (error) {
-        console.error("TagMaster: Error initializing playbar feature:", error);
+        console.error("Tagify: Error initializing playbar feature:", error);
       }
     },
 
@@ -817,7 +816,7 @@
         // Get or create our tag info element
         if (!state.nowPlayingWidgetTagInfo) {
           state.nowPlayingWidgetTagInfo = document.createElement("div");
-          state.nowPlayingWidgetTagInfo.className = "tagmaster-playbar-info";
+          state.nowPlayingWidgetTagInfo.className = "tagify-playbar-info";
           state.nowPlayingWidgetTagInfo.style.marginLeft = "8px";
           state.nowPlayingWidgetTagInfo.style.fontSize = "11px";
           state.nowPlayingWidgetTagInfo.style.display = "flex";
@@ -871,28 +870,28 @@
         // Update the content
         state.nowPlayingWidgetTagInfo.innerHTML = htmlContent;
 
-        // Add a click handler to navigate to TagMaster
+        // Add a click handler to navigate to Tagify
         state.nowPlayingWidgetTagInfo.style.cursor = "pointer";
         state.nowPlayingWidgetTagInfo.onclick = () => {
           Spicetify.Platform.History.push({
-            pathname: "/tag-master",
+            pathname: `/${APP_NAME}`,
             search: `?uri=${encodeURIComponent(trackUri)}`,
             state: { trackUri },
           });
         };
       } catch (error) {
-        console.error("TagMaster: Error updating Now Playing widget", error);
+        console.error("Tagify: Error updating Now Playing widget", error);
       }
     },
   };
 
   // Main initialization
   const initialize = async function () {
-    console.log("TagMaster: Starting initialization...");
+    console.log("Tagify: Starting initialization...");
 
     // Try to load tag data first since it's needed by all features
     if (!utils.loadTaggedTracks()) {
-      console.log("TagMaster: No tagged tracks found");
+      console.log("Tagify: No tagged tracks found");
     }
 
     // Initialize features
@@ -900,7 +899,7 @@
     indicatorFeature.initialize();
     playbarFeature.initialize();
 
-    console.log("TagMaster: Initialization complete");
+    console.log("Tagify: Initialization complete");
   };
 
   // Start initialization
