@@ -618,6 +618,7 @@
 
       // Check if we should show the warning icon
       const needsWarning = utils.shouldShowLikedOnlyWarning(trackUri);
+      const playlistList = utils.getPlaylistListForTrack(trackUri);
 
       if (needsWarning) {
         // Add warning icon for tracks only in Liked Songs or excluded playlists
@@ -627,8 +628,8 @@
         warningIcon.style.fontSize = "12px";
         warningIcon.title = "This track is only in Liked Songs or excluded playlists";
         statusContainer.appendChild(warningIcon);
-      } else {
-        // Add success icon for tracks in regular playlists
+      } else if (playlistList !== "No regular playlists") {
+        // Only add success icon if the track is actually in at least one regular playlist
         const successIcon = document.createElement("span");
         successIcon.innerHTML = "✓";
         successIcon.style.color = "#1DB954"; // Spotify green
@@ -636,7 +637,6 @@
         successIcon.style.fontWeight = "bold";
 
         // Add the list of playlists as a tooltip
-        const playlistList = utils.getPlaylistListForTrack(trackUri);
         successIcon.title = `In playlists: ${playlistList}`;
 
         statusContainer.appendChild(successIcon);
@@ -858,9 +858,14 @@
           // Warning icon for tracks only in Liked Songs/excluded playlists
           htmlContent += `<span style="color:#ffcc00; margin-left:4px;" title="This track is only in Liked Songs or excluded playlists">⚠️</span>`;
         } else {
-          // Green checkmark for tracks in regular playlists
+          // Get playlist list to check if track is in any regular playlists
           const playlistList = utils.getPlaylistListForTrack(trackUri);
-          htmlContent += `<span style="color:#1DB954; margin-left:4px;" title="${playlistList}">✓</span>`;
+
+          // Only add green checkmark if track is in at least one regular playlist
+          if (playlistList !== "No regular playlists") {
+            htmlContent += `<span style="color:#1DB954; margin-left:4px;" title="${playlistList}">✓</span>`;
+          }
+          // If no regular playlists, don't add any icon
         }
 
         // Update the content
