@@ -12,13 +12,28 @@
 
   function handleTagMenuClick(uris) {
     if (uris.length > 0) {
-      const trackUri = uris[0];
+      const trackUris = uris.filter(
+        (uri) => uri.startsWith("spotify:track:") || uri.startsWith("spotify:local:")
+      );
 
-      Spicetify.Platform.History.push({
-        pathname: `/${APP_NAME}`,
-        search: `?uri=${encodeURIComponent(trackUri)}`,
-        state: { trackUri },
-      });
+      // For multiple tracks, encode the URIs array
+      if (trackUris.length > 1) {
+        const encodedUris = encodeURIComponent(JSON.stringify(trackUris));
+
+        Spicetify.Platform.History.push({
+          pathname: `/${APP_NAME}`,
+          search: `?uris=${encodedUris}`,
+          state: { trackUris },
+        });
+      } else if (trackUris.length === 1) {
+        // Single track case
+        const trackUri = trackUris[0];
+        Spicetify.Platform.History.push({
+          pathname: `/${APP_NAME}`,
+          search: `?uri=${encodeURIComponent(trackUri)}`,
+          state: { trackUri },
+        });
+      }
     }
   }
 
