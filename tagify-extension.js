@@ -136,7 +136,7 @@
         settings.excludeByDescription.some((term) =>
           playlistDescription.toLowerCase().includes(term.toLowerCase())
         )
-      )        
+      ) {
         return true;
       }
 
@@ -173,8 +173,6 @@
 
         return result;
       });
-
-
       return !hasNonExcludedPlaylists;
     },
 
