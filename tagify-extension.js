@@ -636,7 +636,7 @@
         successIcon.style.fontWeight = "bold";
 
         // Add the list of playlists as a tooltip
-        successIcon.title = `In playlists: ${playlistList}`;
+        successIcon.title = `${playlistList}`;
 
         statusContainer.appendChild(successIcon);
       }
