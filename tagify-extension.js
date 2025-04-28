@@ -112,11 +112,15 @@
      * @param {string} playlistName - The playlist name
      * @returns {boolean} Whether the playlist is excluded
      */
-    isPlaylistExcluded: function (playlistId, playlistName) {
+    isPlaylistExcluded: function (playlistId, playlistName, playlistDescription = "") {
       const settings = this.getPlaylistSettings();
 
-      if (settings.excludedPlaylistIds.includes(playlistId)) return true;
+      // Check specific excluded playlists
+      if (settings.excludedPlaylistIds.includes(playlistId)) {
+        return true;
+      }
 
+      // Check for excluded keywords in name
       if (
         settings.excludedKeywords.some((keyword) =>
           playlistName.toLowerCase().includes(keyword.toLowerCase())
@@ -125,9 +129,25 @@
         return true;
       }
 
-      // Explicitly exclude "Local Files" playlist
-      if (playlistName === "MASTER" || playlistName === "TAGGED" || playlistName === "Local Files")
+      // Check for description exclusions - important for "ignore" flag
+      if (
+        playlistDescription &&
+        settings.excludeByDescription &&
+        settings.excludeByDescription.some((term) =>
+          playlistDescription.toLowerCase().includes(term.toLowerCase())
+        )
+      )        
         return true;
+      }
+
+      // Explicitly exclude "Local Files" playlist and TAGGED
+      if (
+        playlistName === "MASTER" ||
+        playlistName === "TAGGED" ||
+        playlistName === "Local Files"
+      ) {
+        return true;
+      }
 
       return false;
     },
@@ -141,16 +161,19 @@
       const cache = this.getPlaylistCache();
       const containingPlaylists = cache.tracks[trackUri] || [];
 
-      if (containingPlaylists.length === 0) return false;
+      // CRITICAL CHANGE: If track is not in any playlists, we SHOULD show a warning
+      if (containingPlaylists.length === 0) return true;
 
       const hasNonExcludedPlaylists = containingPlaylists.some((playlist) => {
         // Check if this is a non-excluded, non-Liked Songs, non-Local Files playlist
-        return (
+        const result =
           playlist.id !== "liked" &&
           playlist.name !== "Local Files" &&
-          !this.isPlaylistExcluded(playlist.id, playlist.name)
-        );
+          !this.isPlaylistExcluded(playlist.id, playlist.name);
+
+        return result;
       });
+
 
       return !hasNonExcludedPlaylists;
     },
@@ -166,18 +189,23 @@
 
       const relevantPlaylists = containingPlaylists.filter((playlist) => {
         // Exclude "Local Files" playlist and other excluded playlists
-        return (
+        const result =
           !this.isPlaylistExcluded(playlist.id, playlist.name) &&
           playlist.id !== "liked" &&
-          playlist.name !== "Local Files"
-        );
+          playlist.name !== "Local Files";
+
+        return result;
       });
 
       if (relevantPlaylists.length === 0) {
+        if (trackUri.startsWith("spotify:local:")) {
+          console.log(`Tagify: No relevant playlists for local file`);
+        }
         return "No regular playlists";
       }
 
       const playlistNames = relevantPlaylists.map((playlist) => playlist.name).sort();
+
       return playlistNames.join(", ");
     },
 
