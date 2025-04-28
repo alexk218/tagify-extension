@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 (function TagifyExtension() {
   // Wait for Spicetify to be ready
   if (!(Spicetify?.Platform && Spicetify?.CosmosAsync)) {
@@ -123,7 +125,9 @@
         return true;
       }
 
-      if (playlistName === "MASTER" || playlistName === "TAGGED") return true;
+      // Explicitly exclude "Local Files" playlist
+      if (playlistName === "MASTER" || playlistName === "TAGGED" || playlistName === "Local Files")
+        return true;
 
       return false;
     },
@@ -140,7 +144,12 @@
       if (containingPlaylists.length === 0) return false;
 
       const hasNonExcludedPlaylists = containingPlaylists.some((playlist) => {
-        return playlist.id !== "liked" && !this.isPlaylistExcluded(playlist.id, playlist.name);
+        // Check if this is a non-excluded, non-Liked Songs, non-Local Files playlist
+        return (
+          playlist.id !== "liked" &&
+          playlist.name !== "Local Files" &&
+          !this.isPlaylistExcluded(playlist.id, playlist.name)
+        );
       });
 
       return !hasNonExcludedPlaylists;
@@ -156,7 +165,12 @@
       const containingPlaylists = cache.tracks[trackUri] || [];
 
       const relevantPlaylists = containingPlaylists.filter((playlist) => {
-        return !this.isPlaylistExcluded(playlist.id, playlist.name) && playlist.id !== "liked";
+        // Exclude "Local Files" playlist and other excluded playlists
+        return (
+          !this.isPlaylistExcluded(playlist.id, playlist.name) &&
+          playlist.id !== "liked" &&
+          playlist.name !== "Local Files"
+        );
       });
 
       if (relevantPlaylists.length === 0) {
@@ -234,17 +248,126 @@
       }
 
       try {
-        return (
+        // First try standard approach
+        const uri =
           values[0]?.pendingProps?.children[0]?.props?.children?.props?.uri ||
           values[0]?.pendingProps?.children[0]?.props?.children?.props?.children?.props?.uri ||
           values[0]?.pendingProps?.children[0]?.props?.children?.props?.children?.props?.children
             ?.props?.uri ||
-          values[0]?.pendingProps?.children[0]?.props?.children[0]?.props?.uri
-        );
+          values[0]?.pendingProps?.children[0]?.props?.children[0]?.props?.uri;
+
+        // If we have a URI at this point, return it
+        if (uri) return uri;
+
+        // Special handling for local files - they might have a different structure
+        const localUri = this.extractLocalFileUri(values[0]);
+        if (localUri) return localUri;
+
+        // If we couldn't find a URI, log a warning and return null
+        console.log("Warning: Could not extract URI from element");
+        return null;
       } catch (e) {
         console.log("Error getting URI from element:", e);
         return null;
       }
+    },
+
+    extractLocalFileUri: function (element) {
+      try {
+        // Try to find local file URI in various locations of the React component tree
+        if (!element || !element.pendingProps) return null;
+
+        // First direct check for uri property
+        if (element.pendingProps.uri && element.pendingProps.uri.startsWith("spotify:local:")) {
+          return element.pendingProps.uri;
+        }
+
+        // Check the track object if it exists
+        if (
+          element.pendingProps.track &&
+          element.pendingProps.track.uri &&
+          element.pendingProps.track.uri.startsWith("spotify:local:")
+        ) {
+          return element.pendingProps.track.uri;
+        }
+
+        // Deep search in children
+        if (element.pendingProps.children && Array.isArray(element.pendingProps.children)) {
+          for (const child of element.pendingProps.children) {
+            if (child && child.props) {
+              // Check if this child has the URI
+              if (child.props.uri && child.props.uri.startsWith("spotify:local:")) {
+                return child.props.uri;
+              }
+
+              // Check if it has a track object with URI
+              if (
+                child.props.track &&
+                child.props.track.uri &&
+                child.props.track.uri.startsWith("spotify:local:")
+              ) {
+                return child.props.track.uri;
+              }
+            }
+          }
+        }
+
+        return null;
+      } catch (error) {
+        console.error("Error extracting local file URI:", error);
+        return null;
+      }
+    },
+
+    parseLocalFileUri: function (uri) {
+      if (!uri.startsWith("spotify:local:")) {
+        return { title: "Unknown Track", artist: "Unknown Artist" };
+      }
+
+      try {
+        // Split the URI
+        const parts = uri.split(":");
+
+        // Handle different formats
+        if (parts.length >= 5) {
+          let title = "Local Track";
+          let artist = "Local Artist";
+
+          // Format with empty artist/album slots but has artist:title at the end
+          if (parts[2] === "" && parts[3] === "") {
+            artist = decodeURIComponent(parts[4].replace(/\+/g, " "));
+            let potentialTitle =
+              parts.length > 5 ? decodeURIComponent(parts[5].replace(/\+/g, " ")) : "";
+
+            // Check if the title part is just a number (likely duration)
+            if (potentialTitle && !isNaN(Number(potentialTitle))) {
+              title = artist; // Use the artist field as title
+              artist = "Local Artist";
+            } else {
+              title = potentialTitle;
+            }
+          }
+          // Format with artist, album, title fields
+          else if (parts[2] && parts[3] && parts[4]) {
+            artist = decodeURIComponent(parts[2].replace(/\+/g, " "));
+            title = decodeURIComponent(parts[4].replace(/\+/g, " "));
+          }
+
+          // Clean up the title (remove file extension)
+          title = title.replace(/\.[^/.]+$/, "").trim();
+          artist = artist.trim();
+
+          // Set defaults if empty
+          if (!title) title = "Local Track";
+          if (!artist) artist = "Local Artist";
+
+          return { title, artist };
+        }
+      } catch (error) {
+        console.error("Error parsing local file URI:", error);
+      }
+
+      return { title: "Local Track", artist: "Unknown Artist" };
     },
 
     /**
@@ -534,8 +657,11 @@
       // Get track URI
       const trackUri = utils.getTracklistTrackUri(row);
 
-      // Skip if no URI found or not a track
-      if (!trackUri || !trackUri.includes("track")) return;
+      // Skip if no URI found
+      if (!trackUri) return;
+
+      // Ensure we're dealing with a track URI (either Spotify track or local file)
+      if (!trackUri.includes("track") && !trackUri.startsWith("spotify:local:")) return;
 
       // Find the last column to insert before
       const lastColumn = row.querySelector(".main-trackList-rowSectionEnd");
@@ -552,7 +678,7 @@
       tagColumn.setAttribute("aria-colindex", colIndex.toString());
       tagColumn.style.display = "flex";
       tagColumn.style.alignItems = "center";
-      tagColumn.style.justifyContent = "space-between"; // This helps with alignment
+      tagColumn.style.justifyContent = "space-between";
 
       // Make the entire column clickable
       tagColumn.style.cursor = "pointer";
@@ -625,7 +751,9 @@
         warningIcon.innerHTML = "⚠️";
         warningIcon.style.color = "#ffcc00";
         warningIcon.style.fontSize = "12px";
-        warningIcon.title = "This track is only in Liked Songs or excluded playlists";
+        warningIcon.title = trackUri.startsWith("spotify:local:")
+          ? "Local file should be organized into playlists"
+          : "This track is only in Liked Songs or excluded playlists";
         statusContainer.appendChild(warningIcon);
       } else if (playlistList !== "No regular playlists") {
         // Only add success icon if the track is actually in at least one regular playlist
