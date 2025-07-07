@@ -609,10 +609,7 @@
         indicatorFeature.addTagInfoToTrack(row);
       });
 
-      console
-        .log
-        // `Tagify: Processed ${trackRows.length} rows, found ${taggedCount} tagged tracks`
-        ();
+      console.log(`Tagify: Processed ${trackRows.length} rows, found ${taggedCount} tagged tracks`);
     },
 
     /**
