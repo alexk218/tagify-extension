@@ -100,7 +100,7 @@
       // Return default settings if not found or error
       return {
         excludeNonOwnedPlaylists: true,
-        excludedKeywords: ["Daylist", "Unchartify", "Discover Weekly", "Release Radar"],
+        excludedPlaylistKeywords: ["Daylist", "Discover Weekly", "Release Radar"],
         excludedPlaylistIds: [],
         excludeByDescription: ["ignore"],
       };
@@ -122,7 +122,7 @@
 
       // Check for excluded keywords in name
       if (
-        settings.excludedKeywords.some((keyword) =>
+        settings.excludedPlaylistKeywords.some((keyword) =>
           playlistName.toLowerCase().includes(keyword.toLowerCase())
         )
       ) {
